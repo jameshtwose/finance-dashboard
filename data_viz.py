@@ -37,12 +37,12 @@ def show_bar_plot(data: pd.DataFrame,
                                height=800, 
                                title=f"Stacked Bar per {amount_column} Per Year/ Month")
     fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
-    fig.add_hline(y=2926, line_dash="dot", 
-                #   line_color="white",
-                #   annotation_font_color="white",
-                annotation_font_size=20,
-                annotation_text="Main Income",
-                annotation_position="top left")
+    # fig.add_hline(y=2926, line_dash="dot", 
+    #             #   line_color="white",
+    #             #   annotation_font_color="white",
+    #             annotation_font_size=20,
+    #             annotation_text="Main Income",
+    #             annotation_position="top left")
     return fig
 
 def parse_contents(contents, filename):
