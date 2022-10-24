@@ -25,7 +25,9 @@ sidebar = html.Div(
         html.H2("Finance Dashboard", className="display-4"),
         html.Hr(),
         html.P(
-            "Upload your finance data in csv format", className="lead"
+            """Upload your finance data in csv format (currently ING .csv 
+            files in either English or Dutch are accepted)""", 
+            className="lead"
         ),
         dcc.Upload(html.Button('Upload File'), id='upload-data', multiple=True),
         html.Hr(),
@@ -33,7 +35,7 @@ sidebar = html.Div(
             [
                 dbc.NavLink("Home/ Descriptives", href="/", active="exact"),
                 dbc.NavLink("Bar Plots", href="/page-1", active="exact"),
-                dbc.NavLink("Page 2", href="/page-2", active="exact"),
+                dbc.NavLink("Time Series Plots", href="/page-2", active="exact"),
             ],
             vertical=True,
             pills=True,
