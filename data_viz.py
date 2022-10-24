@@ -109,14 +109,14 @@ def parse_input(contents, filename):
                                 "Month": lambda x: x[date_column].dt.month,
                                 "Year-Month": lambda x: x["Year"].astype(str) + "-" +  x["Month"].astype(str),
                                 amount_column: lambda d: d[amount_column]
-                                .str.replace(",",".")
+                                # .str.replace(",",".")
                                 .astype(float)})
             
             if "Datum" not in df.columns.tolist():
                 df = df.assign(**{sum_column: lambda d: d[amount_column].cumsum()})
             else:
                 df = df.assign(**{sum_column: lambda d: d[sum_column]
-                                .str.replace(",",".")
+                                # .str.replace(",",".")
                                 .astype(float)})
             return df, amount_column, groupby_column, date_column, name_column, sum_column
         else:
