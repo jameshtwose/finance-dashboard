@@ -94,7 +94,10 @@ def parse_input(contents, filename):
                 groupby_column = "Mutatiesoort"
                 date_column = "Datum"
                 name_column = "Naam / Omschrijving"
-                sum_column = "Saldo na mutatie"
+                if "Saldo na mutatie" in df.columns.tolist():
+                    sum_column = "Saldo na mutatie"
+                else:
+                    sum_column = None
             else:
                 groupby_column = "Transaction type"
                 date_column = "Date"
