@@ -7,7 +7,7 @@ SIDEBAR_STYLE = {
     "top": 0,
     "left": 0,
     "bottom": 0,
-    "width": "20rem",
+    "width": "30rem",
     "padding": "2rem 1rem",
     "background-color": "#f8f9fa",
 }
@@ -15,7 +15,7 @@ SIDEBAR_STYLE = {
 # the styles for the main content position it to the right of the sidebar and
 # add some padding.
 CONTENT_STYLE = {
-    "margin-left": "20rem",
+    "margin-left": "30rem",
     "margin-right": "2rem",
     "padding": "2rem 1rem",
 }
@@ -29,6 +29,17 @@ sidebar = html.Div(
             files in either English or Dutch are accepted)""", 
             className="lead"
         ),
+        html.Hr(),
+        dcc.Dropdown(options=["ASN",
+                              "BUNQ",
+                              "ING - Dutch (comma seperated)", 
+                              "ING - Dutch (semicolon seperated)", 
+                              "ING - English (comma seperated)", 
+                              "ING - English (semicolon seperated)"], 
+                     value="ASN",
+                     multi=False, 
+                     id='demo-dropdown'),
+        html.Hr(),
         dcc.Upload(html.Button('Upload File'), id='upload-data', multiple=True),
         html.Hr(),
         dbc.Nav(

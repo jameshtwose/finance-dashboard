@@ -1,14 +1,9 @@
+from server import app
 from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 from sidebar import sidebar, content
-from data_viz import parse_descriptives, parse_bar_plots, parse_time_plots
+from parse import parse_descriptives, parse_bar_plots, parse_time_plots
 import pandas as pd
-
-external_stylesheets=[dbc.themes.BOOTSTRAP, 'https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
-
-server = app.server
 
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
@@ -42,11 +37,21 @@ def update_time_plots_output(list_of_contents, list_of_names):
             zip(list_of_contents, list_of_names)]
         return children
 
-@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
+@app.callback(
+    Output('dd-output-container', 'children'),
+    Input('demo-dropdown', 'value')
+)
+def update_output(value):
+    return f'You have selected {value}'
+
+@app.callback(Output("page-content", "children"), 
+              [Input("url", "pathname")])
 def render_page_content(pathname):
     if pathname == "/":
         # return html.P("This is the content of the home page!")
-        return html.Div(id='output-data-upload-descriptives')
+        output = html.Div([html.Div(id='output-data-upload-descriptives'), 
+                           html.Div(id='dd-output-container')])
+        return output
     elif pathname == "/page-1":
         # return html.P("This is the content of page 1. Yay!")
         return html.Div(id='output-data-upload-bar')
@@ -64,5 +69,5 @@ def render_page_content(pathname):
     )
 
 if __name__ == '__main__':
-    # app.run_server(debug=True, threaded=True)
-    app.run_server(debug=False, threaded=False)
+    app.run_server(debug=True, threaded=True)
+    # app.run_server(debug=False, threaded=False)
