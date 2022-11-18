@@ -1,55 +1,39 @@
-import os
+from server_test import app, server
+from dash import Dash, dcc, html, Input, Output, State
+import dash_bootstrap_components as dbc
+from sidebar_test import sidebar, content
+from parse_test import parse_descriptives
 import pandas as pd
-import dash
-from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
-import plotly.graph_objects as go
-import plotly.express as px
 
+app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+@app.callback(Output('output-data-upload-descriptives', 'children'),
+              Input('upload-data', 'contents'),
+              State('upload-data', 'filename'))
+def update_descriptives_output(list_of_contents, list_of_names):
+    if list_of_contents is not None:
+        children = [
+            parse_descriptives(contents=c, filename=n) for c, n in
+            zip(list_of_contents, list_of_names)]
+        return children
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-server = app.server
-
-df = pd.read_csv("data/NL20INGB0679269126_01-07-2022_23-10-2022.csv", sep=",", decimal=",")
-
-country_list = df["Mutatiesoort"].unique().tolist()
-
-app.layout = html.Div([
-    html.H1(id='H1', children='COVID Numbers', style={'textAlign': 'center', 'marginTop': 40, 'marginBottom': 40}),
-    html.Div([dcc.Dropdown(
-            id='country_choice',
-            options=[{'label': i.title().replace("_", " "), 'value': i} for i in country_list],
-            value=country_list[0]
-        )], style={'width': '20%', 'display': 'inline-block', "padding": "5px"}),
-    html.Div(id='table'),
-    html.Div(html.A(children="Created by James Twose",
-                    href="https://services.jms.rocks",
-                    style={'color': "#743de0"}),
-                    style = {'textAlign': 'center',
-                             'color': "#743de0",
-                             'marginTop': 40,
-                             'marginBottom': 40})
-]
-)
-
-@app.callback(Output(component_id='table', component_property='children'),
-              [Input(component_id='country_choice', component_property='value')]
-              )
-def table_update(country_choice):
-    
-    descriptives_df = (df.loc[df["Mutatiesoort"] == '{}'.format(country_choice), :]
-                       .describe())
-    
-    descriptives_table = dash_table.DataTable(
-            descriptives_df.to_dict('records'),
-            [{'name': i, 'id': i} for i in descriptives_df.columns]
-        )
-    
-    return html.Div([descriptives_table])
-
+@app.callback(Output("page-content", "children"), 
+              [Input("url", "pathname")])
+def render_page_content(pathname):
+    if pathname == "/":
+        # return html.P("This is the content of the home page!")
+        output = html.Div([html.Div(id='output-data-upload-descriptives'), 
+                           html.Div(id='dd-output-container')])
+        return output
+    # If the user tries to reach a different page, return a 404 message
+    return html.Div(
+        [
+            html.H1("404: Not found", className="text-danger"),
+            html.Hr(),
+            html.P(f"The pathname {pathname} was not recognised..."),
+        ],
+        className="p-3 bg-light rounded-3",
+    )
 
 if __name__ == '__main__':
     app.run_server(debug=True, threaded=True)

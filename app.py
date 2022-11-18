@@ -1,4 +1,4 @@
-from server import app
+from server import app, server
 from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 from sidebar import sidebar, content
@@ -13,7 +13,7 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 def update_descriptives_output(list_of_contents, list_of_names):
     if list_of_contents is not None:
         children = [
-            parse_descriptives(c, n) for c, n in
+            parse_descriptives(contents=c, filename=n) for c, n in
             zip(list_of_contents, list_of_names)]
         return children
     
@@ -39,10 +39,10 @@ def update_time_plots_output(list_of_contents, list_of_names):
 
 @app.callback(
     Output('dd-output-container', 'children'),
-    Input('demo-dropdown', 'value')
+    Input('bank-string-dropdown', 'value')
 )
-def update_output(value):
-    return f'You have selected {value}'
+def update_output(bank_string):
+    return f'You have selected {bank_string}'
 
 @app.callback(Output("page-content", "children"), 
               [Input("url", "pathname")])

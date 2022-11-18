@@ -1,11 +1,8 @@
 import base64
 import pandas as pd
 import io
-from dash import dcc, html, dash_table, Input, Output
-from data_viz import (show_bar_plot,
-                      show_line_plot,
-                      show_box_plot)
-from parse_utils import (ASN_column_names, 
+from dash import dcc, html, dash_table, Input, Output, State
+from parse_utils_test import (ASN_column_names, 
                          ASN_column_subset,
                          ASN_DUTCH_TO_ENGLISH_dict,
                          BUNQ_column_subset,
@@ -13,24 +10,18 @@ from parse_utils import (ASN_column_names,
                          ING_DUTCH_TO_ENGLISH_dict,
                          ING_DUTCH_columns_list,
                          ING_ENGLISH_columns_list)
-from server import app
-
-selection_list = ["ASN",
-"BUNQ",
-"ING - Dutch (comma seperated)", 
-"ING - Dutch (semicolon seperated)", 
-"ING - English (comma seperated)", 
-"ING - English (semicolon seperated)"]
+from server_test import app
 
 @app.callback(
     Output('df', 'children'),
     Output('amount_column', 'children'),
     Output('groupby_column', 'children'),
-    Output('date_column', 'children'),
-    Output('name_column', 'children'),
-    Output('sum_column', 'children'),
-    Input('num-multi', 'value'))
-def parse_input(contents, filename, bank_string=selection_list[5]):
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename'),
+    Input('bank-string-dropdown', 'value'))
+def parse_input(contents, filename, bank_string):
+    
+    print(bank_string)
     
     content_type, content_string = contents.split(',')
 
@@ -139,7 +130,7 @@ def parse_input(contents, filename, bank_string=selection_list[5]):
             
             print(df.head(10))
             
-            return df, amount_column, groupby_column, date_column, name_column, sum_column
+            return df, amount_column, groupby_column #, date_column, name_column, sum_column
         else:
             return html.Div([
                 'Currently only .csv files are accepted in this dashboard'
@@ -150,64 +141,8 @@ def parse_input(contents, filename, bank_string=selection_list[5]):
             'There was an error processing this file.'
         ])
         
-
-# def parse_input(contents, filename):
-    
-#     content_type, content_string = contents.split(',')
-
-#     decoded = base64.b64decode(content_string)
-#     try:
-#         if 'csv' in filename:
-#             # Assume that the user uploaded a CSV file
-#             try:
-#                 df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-#                 # print(df.head())
-#             except:
-#                 df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep=";")
-#                 # print(df.head())
-#             amount_column = df.filter(regex="EUR").columns.tolist()[0]
-#             if "Datum" in df.columns.tolist():
-#                 groupby_column = "Mutatiesoort"
-#                 date_column = "Datum"
-#                 name_column = "Naam / Omschrijving"
-#                 # df = df.assign(**{"Bedrag (EUR)": lambda d: d["Bedrag (EUR)"].str.replace(",", ".").astype(float)})
-#                 if "Saldo na mutatie" in df.columns.tolist():
-#                     sum_column = "Saldo na mutatie"
-#                 else:
-#                     sum_column = None
-#             else:
-#                 groupby_column = "Transaction type"
-#                 date_column = "Date"
-#                 name_column = "Name / Description"
-#                 sum_column = "Balance Sum"
-            
-#             df = df.assign(**{date_column: lambda x: pd.to_datetime(x[date_column], format="%Y%m%d"),
-#                                 "Year": lambda x: x[date_column].dt.year,
-#                                 "Month": lambda x: x[date_column].dt.month,
-#                                 "Year-Month": lambda x: x["Year"].astype(str) + "-" +  x["Month"].astype(str),
-#                                 amount_column: lambda d: d[amount_column]
-#                                 # .str.replace(",",".")
-#                                 .astype(float)})
-            
-#             if "Datum" not in df.columns.tolist():
-#                 df = df.assign(**{sum_column: lambda d: d[amount_column].cumsum()})
-#             else:
-#                 df = df.assign(**{sum_column: lambda d: d[sum_column]
-#                                 # .str.replace(",",".")
-#                                 .astype(float)})
-#             return df, amount_column, groupby_column, date_column, name_column, sum_column
-#         else:
-#             return html.Div([
-#             'Currently only .csv files are accepted in this dashboard'
-#             ])
-#     except Exception as e:
-#         print(e)
-#         return html.Div([
-#             'There was an error processing this file.'
-#         ])
-
-def parse_descriptives(contents, filename):
-    df, amount_column, groupby_column, _, _, _ = parse_input(contents, filename)
+def parse_descriptives(filename, df, amount_column, groupby_column):
+    # df, amount_column, groupby_column, _, _, _ = parse_input(contents, filename)
 
     groupby_columns_list = [groupby_column, "Debit/credit", amount_column]
     totals_columns_list = ["Year-Month", "Debit/credit", amount_column]
@@ -246,66 +181,3 @@ def parse_descriptives(contents, filename):
             [{'name': i, 'id': i} for i in totals_df.columns]
         )
     ])
-
-def parse_bar_plots(contents, filename):
-    df, amount_column, groupby_column, date_column, name_column, _ = parse_input(contents, filename)
-
-    bar_fig = show_bar_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=groupby_column,
-                            hover_columns=[name_column, groupby_column])
-
-    bar_in_fig = show_bar_plot(data=df[df["Debit/credit"]=="Credit"], 
-                        amount_column=amount_column,
-                        date_column=date_column,
-                        color_column=groupby_column,
-                        hover_columns=[name_column, groupby_column])
-    bar_out_fig = show_bar_plot(data=df[df["Debit/credit"]=="Debit"], 
-                        amount_column=amount_column,
-                        date_column=date_column,
-                        color_column=groupby_column,
-                        hover_columns=[name_column, groupby_column])
-    return html.Div([
-            html.H5(filename),
-            html.H6("Barplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=bar_fig),
-            html.H6("Barplot of all outgoing transactions"),
-            dcc.Graph(figure=bar_out_fig),
-            html.H6("Barplot of all incoming transactions"),
-            dcc.Graph(figure=bar_in_fig)
-        ])
-
-        
-def parse_time_plots(contents, filename):
-    df, amount_column, groupby_column, date_column, name_column, sum_column = parse_input(contents, filename)
-   
-    color_column = "Debit/credit"
-    
-    box_fig = show_box_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=color_column,
-                            hover_columns=[name_column, groupby_column])
-    
-    line_fig = show_line_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=color_column,
-                            hover_columns=[name_column, groupby_column])
-     
-    sum_line_fig = show_line_plot(data=df, 
-                            amount_column=sum_column,
-                            date_column=date_column,
-                            color_column=None,
-                            hover_columns=[name_column, groupby_column])
-    return html.Div([
-            html.H5(filename),
-            html.H6("Boxplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=box_fig),
-            html.H6("Lineplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=line_fig),
-            html.H6("Lineplot of the sum of all incoming and outgoing transactions"),
-            dcc.Graph(figure=sum_line_fig),
-        ])
-
