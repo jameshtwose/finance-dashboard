@@ -78,9 +78,10 @@ def parse_contents(contents, filename, date):
               State('upload-data', 'last_modified'))
 def update_output(list_of_contents, list_of_names, list_of_dates):
     if list_of_contents is not None:
-        children = [
-            parse_contents(c, n, d) for c, n, d in
-            zip(list_of_contents, list_of_names, list_of_dates)]
+        
+        children = parse_contents(contents=list_of_contents[0],
+                                  filename=list_of_names[0], 
+                                  date=list_of_dates[0])
         
         return children
 

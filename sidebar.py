@@ -22,11 +22,11 @@ CONTENT_STYLE = {
 
 sidebar = html.Div(
     [
-        html.H2("Finance Dashboard", className="display-4"),
+        html.H2("Finance Dashboard (Dutch)", className="display-4"),
         html.Hr(),
         html.P(
-            """Upload your finance data in csv format (currently ING .csv 
-            files in either English or Dutch are accepted)""", 
+            """Upload your finance data in csv format (currently ASN, BUNQ, ING .csv 
+            files in either English or Dutch (ING) are accepted)""", 
             className="lead"
         ),
         html.Hr(),

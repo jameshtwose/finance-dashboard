@@ -12,13 +12,6 @@ from parse_utils_test import (ASN_column_names,
                          ING_ENGLISH_columns_list)
 from server_test import app
 
-@app.callback(
-    Output('df', 'children'),
-    Output('amount_column', 'children'),
-    Output('groupby_column', 'children'),
-    Input('upload-data', 'contents'),
-    State('upload-data', 'filename'),
-    Input('bank-string-dropdown', 'value'))
 def parse_input(contents, filename, bank_string):
     
     print(bank_string)
@@ -128,8 +121,6 @@ def parse_input(contents, filename, bank_string):
                         )
                       )
             
-            print(df.head(10))
-            
             return df, amount_column, groupby_column #, date_column, name_column, sum_column
         else:
             return html.Div([
@@ -141,8 +132,8 @@ def parse_input(contents, filename, bank_string):
             'There was an error processing this file.'
         ])
         
-def parse_descriptives(filename, df, amount_column, groupby_column):
-    # df, amount_column, groupby_column, _, _, _ = parse_input(contents, filename)
+def parse_descriptives(contents, filename, bank_string):
+    df, amount_column, groupby_column = parse_input(contents, filename, bank_string)
 
     groupby_columns_list = [groupby_column, "Debit/credit", amount_column]
     totals_columns_list = ["Year-Month", "Debit/credit", amount_column]
@@ -155,16 +146,27 @@ def parse_descriptives(filename, df, amount_column, groupby_column):
                     .round(2)
                     )
     descriptives_df.columns = [" - ".join(x) for x in descriptives_df.columns]
-    head_df = df.head(2)
-    totals_df = df[totals_columns_list].groupby(totals_columns_list[:-1]).sum().reset_index().round(2)
+    totals_df = (df[totals_columns_list]
+                 .groupby(totals_columns_list[:-1])
+                 .sum()
+                 .reset_index()
+                 .round(2)
+                 )
     
     return html.Div([
         html.H5(filename),
         html.H6("Data Frame Head"),
 
         dash_table.DataTable(
-            head_df.to_dict('records'),
-            [{'name': i, 'id': i} for i in head_df.columns]
+                        data=df.round(2).to_dict('records'),
+                        columns=[{'name': i, 'id': i} for i in df.columns],
+                        sort_action="native",
+                        filter_action="native",
+                        row_deletable=True,
+                        export_format='csv',
+                        export_headers='display',
+                        merge_duplicate_headers=True,
+                        page_size=10,
         ),
         
         html.H6("Descriptive Statistics:"),

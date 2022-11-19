@@ -9,12 +9,13 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
 @app.callback(Output('output-data-upload-descriptives', 'children'),
               Input('upload-data', 'contents'),
-              State('upload-data', 'filename'))
-def update_descriptives_output(list_of_contents, list_of_names):
+              State('upload-data', 'filename'),
+              Input('bank-string-dropdown', 'value'))
+def update_descriptives_output(list_of_contents, list_of_names, bank_string):
     if list_of_contents is not None:
-        children = [
-            parse_descriptives(contents=c, filename=n) for c, n in
-            zip(list_of_contents, list_of_names)]
+        children = parse_descriptives(contents=list_of_contents[0],
+                                      filename=list_of_names[0],
+                                      bank_string=bank_string)
         return children
 
 @app.callback(Output("page-content", "children"), 
