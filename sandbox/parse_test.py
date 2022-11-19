@@ -1,11 +1,8 @@
 import base64
 import pandas as pd
 import io
-from dash import dcc, html, dash_table, Input, Output
-from data_viz import (show_bar_plot,
-                      show_line_plot,
-                      show_box_plot)
-from parse_utils import (ASN_column_names, 
+from dash import dcc, html, dash_table, Input, Output, State
+from parse_utils_test import (ASN_column_names, 
                          ASN_column_subset,
                          ASN_DUTCH_TO_ENGLISH_dict,
                          BUNQ_column_subset,
@@ -13,19 +10,19 @@ from parse_utils import (ASN_column_names,
                          ING_DUTCH_TO_ENGLISH_dict,
                          ING_DUTCH_columns_list,
                          ING_ENGLISH_columns_list)
-from server import app
-
-amount_column = 'Amount (EUR)'
-groupby_column = 'Code'
-date_column = 'Date'
-name_column = 'Name / Description'
-sum_column = 'Total (EUR)'
+from server_test import app
 
 def parse_input(contents, filename, bank_string):
+    
+    print(bank_string)
+    
     content_type, content_string = contents.split(',')
+
     decoded = base64.b64decode(content_string)
+    
     try:
         if 'csv' in filename:
+    
             if bank_string == "ASN":
                 df = (pd.read_csv(io.StringIO(decoded.decode('utf-8')),
                                 header=None, 
@@ -93,8 +90,19 @@ def parse_input(contents, filename, bank_string):
                 df = (pd.read_csv(io.StringIO(decoded.decode('utf-8')), 
                                 sep=";", 
                                 decimal=",")
+                      .assign(**{"Amount (EUR)": lambda d: d["Amount (EUR)"]
+                                .str.replace(".", "")
+                                .str.replace(",",".")
+                                .astype(float)})
                       .loc[:, ING_ENGLISH_columns_list]
                       )
+                            
+            amount_column = 'Amount (EUR)'
+            groupby_column = 'Code'
+            date_column = 'Date'
+            name_column = 'Name / Description'
+            sum_column = 'Total (EUR)'
+            
             if "ING" in bank_string:
                 df = df.assign(**{date_column: lambda x: pd.to_datetime(x[date_column], format="%Y%m%d")})
             
@@ -112,7 +120,8 @@ def parse_input(contents, filename, bank_string):
                             }
                         )
                       )
-            return df, amount_column, groupby_column, date_column, name_column, sum_column
+            
+            return df, amount_column, groupby_column #, date_column, name_column, sum_column
         else:
             return html.Div([
                 'Currently only .csv files are accepted in this dashboard'
@@ -124,7 +133,7 @@ def parse_input(contents, filename, bank_string):
         ])
         
 def parse_descriptives(contents, filename, bank_string):
-    df, amount_column, groupby_column, _, _, _ = parse_input(contents, filename, bank_string)
+    df, amount_column, groupby_column = parse_input(contents, filename, bank_string)
 
     groupby_columns_list = [groupby_column, "Debit/credit", amount_column]
     totals_columns_list = ["Year-Month", "Debit/credit", amount_column]
@@ -137,22 +146,27 @@ def parse_descriptives(contents, filename, bank_string):
                     .round(2)
                     )
     descriptives_df.columns = [" - ".join(x) for x in descriptives_df.columns]
-    totals_df = df[totals_columns_list].groupby(totals_columns_list[:-1]).sum().reset_index().round(2)
+    totals_df = (df[totals_columns_list]
+                 .groupby(totals_columns_list[:-1])
+                 .sum()
+                 .reset_index()
+                 .round(2)
+                 )
     
     return html.Div([
         html.H5(filename),
         html.H6("Data Frame Head"),
 
         dash_table.DataTable(
-            data=df.round(2).to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in df.columns],
-            sort_action="native",
-            filter_action="native",
-            row_deletable=True,
-            export_format='csv',
-            export_headers='display',
-            merge_duplicate_headers=True,
-            page_size=10,
+                        data=df.round(2).to_dict('records'),
+                        columns=[{'name': i, 'id': i} for i in df.columns],
+                        sort_action="native",
+                        filter_action="native",
+                        row_deletable=True,
+                        export_format='csv',
+                        export_headers='display',
+                        merge_duplicate_headers=True,
+                        page_size=10,
         ),
         
         html.H6("Descriptive Statistics:"),
@@ -165,76 +179,7 @@ def parse_descriptives(contents, filename, bank_string):
         html.H6("Total per month:"),
 
         dash_table.DataTable(
-            data=totals_df.to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in totals_df.columns],
-            sort_action="native",
-            filter_action="native",
-            row_deletable=True,
-            export_format='csv',
-            export_headers='display',
-            merge_duplicate_headers=True,
-            page_size=10,
+            totals_df.to_dict('records'),
+            [{'name': i, 'id': i} for i in totals_df.columns]
         )
     ])
-
-def parse_bar_plots(contents, filename, bank_string):
-    df, amount_column, groupby_column, date_column, name_column, _ = parse_input(contents, filename, bank_string)
-
-    bar_fig = show_bar_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=groupby_column,
-                            hover_columns=[name_column, groupby_column])
-
-    bar_in_fig = show_bar_plot(data=df[df["Debit/credit"]=="Credit"], 
-                        amount_column=amount_column,
-                        date_column=date_column,
-                        color_column=groupby_column,
-                        hover_columns=[name_column, groupby_column])
-    bar_out_fig = show_bar_plot(data=df[df["Debit/credit"]=="Debit"], 
-                        amount_column=amount_column,
-                        date_column=date_column,
-                        color_column=groupby_column,
-                        hover_columns=[name_column, groupby_column])
-    return html.Div([
-            html.H5(filename),
-            html.H6("Barplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=bar_fig),
-            html.H6("Barplot of all outgoing transactions"),
-            dcc.Graph(figure=bar_out_fig),
-            html.H6("Barplot of all incoming transactions"),
-            dcc.Graph(figure=bar_in_fig)
-        ])
- 
-def parse_time_plots(contents, filename, bank_string):
-    df, amount_column, groupby_column, date_column, name_column, sum_column = parse_input(contents, filename, bank_string)
-   
-    color_column = "Debit/credit"
-    
-    box_fig = show_box_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=color_column,
-                            hover_columns=[name_column, groupby_column])
-    
-    line_fig = show_line_plot(data=df, 
-                            amount_column=amount_column,
-                            date_column=date_column,
-                            color_column=color_column,
-                            hover_columns=[name_column, groupby_column])
-     
-    sum_line_fig = show_line_plot(data=df, 
-                            amount_column=sum_column,
-                            date_column=date_column,
-                            color_column=None,
-                            hover_columns=[name_column, groupby_column])
-    return html.Div([
-            html.H5(filename),
-            html.H6("Boxplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=box_fig),
-            html.H6("Lineplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=line_fig),
-            html.H6("Lineplot of the sum of all incoming and outgoing transactions"),
-            dcc.Graph(figure=sum_line_fig),
-        ])
-
