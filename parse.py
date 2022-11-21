@@ -12,7 +12,10 @@ from parse_utils import (ASN_column_names,
                          BUNQ_TO_ING_names_dict,
                          ING_DUTCH_TO_ENGLISH_dict,
                          ING_DUTCH_columns_list,
-                         ING_ENGLISH_columns_list)
+                         ING_ENGLISH_columns_list,
+                         REVOLUT_column_subset,
+                         REVOLUT_TO_ING_names_dict, 
+                         )
 from server import app
 
 amount_column = 'Amount (EUR)'
@@ -95,6 +98,25 @@ def parse_input(contents, filename, bank_string):
                                 decimal=",")
                       .loc[:, ING_ENGLISH_columns_list]
                       )
+            elif bank_string == "REVOLUT":
+                    df = (pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+                    # .assign(**{"Amount": lambda d: d["Amount"]
+                    #             .str.replace(".", "")
+                    #             .str.replace(",",".")
+                    #             .astype(float)})
+                       .loc[:, REVOLUT_column_subset]
+                      .rename(columns=REVOLUT_TO_ING_names_dict)
+                      .assign(**{"Debit/credit": lambda d: d["Amount (EUR)"]
+                                 .mask(lambda x: x > 0, 1)
+                                 .mask(lambda x: x < 0, 0)
+                                 .replace({0: "Debit", 1: "Credit"}),
+                                 "Amount (EUR)": lambda d: d["Amount (EUR)"].abs(),
+                                 "Date": lambda d: pd.to_datetime(d["Date"], format="%Y-%m-%d").round("d"),
+                                 "Code": "Not Available"
+                                 }
+                              )
+                    )
+            
             if "ING" in bank_string:
                 df = df.assign(**{date_column: lambda x: pd.to_datetime(x[date_column], format="%Y%m%d")})
             
@@ -139,13 +161,18 @@ def parse_descriptives(contents, filename, bank_string):
     descriptives_df.columns = [" - ".join(x) for x in descriptives_df.columns]
     totals_df = df[totals_columns_list].groupby(totals_columns_list[:-1]).sum().reset_index().round(2)
     
+    head_df = (df
+            .drop(["Year", "Month", "Year-Month"], axis=1)
+            .round(2))
+    
     return html.Div([
         html.H5(filename),
         html.H6("Data Frame Head"),
 
         dash_table.DataTable(
-            data=df.round(2).to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in df.columns],
+            data=head_df.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in head_df.columns],
+            style_header={'backgroundColor': '#5f4a89'},
             sort_action="native",
             filter_action="native",
             row_deletable=True,
@@ -159,7 +186,8 @@ def parse_descriptives(contents, filename, bank_string):
 
         dash_table.DataTable(
             descriptives_df.to_dict('records'),
-            [{'name': i, 'id': i} for i in descriptives_df.columns]
+            [{'name': i, 'id': i} for i in descriptives_df.columns],
+            style_header={'backgroundColor': '#5f4a89'},
         ),
         
         html.H6("Total per month:"),
@@ -167,6 +195,7 @@ def parse_descriptives(contents, filename, bank_string):
         dash_table.DataTable(
             data=totals_df.to_dict('records'),
             columns=[{'name': i, 'id': i} for i in totals_df.columns],
+            style_header={'backgroundColor': '#5f4a89'},
             sort_action="native",
             filter_action="native",
             row_deletable=True,
@@ -184,7 +213,8 @@ def parse_bar_plots(contents, filename, bank_string):
                             amount_column=amount_column,
                             date_column=date_column,
                             color_column=groupby_column,
-                            hover_columns=[name_column, groupby_column])
+                            hover_columns=[name_column, groupby_column]
+                            )
 
     bar_in_fig = show_bar_plot(data=df[df["Debit/credit"]=="Credit"], 
                         amount_column=amount_column,
