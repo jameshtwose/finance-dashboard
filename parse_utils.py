@@ -60,3 +60,18 @@ REVOLUT_TO_ING_names_dict = dict(zip(REVOLUT_column_subset, ["Date",
                                                              'Account', 
                                                              'Name / Description', 
                                                              'Debit/credit']))
+
+# REVOLUT - Business
+REVOLUT_BUSINESS_column_subset = ['Date started (UTC)', 'Date completed (UTC)', 'ID', 'Type',
+       'Description', 'Reference', 'Payer', 'Card number', 'Orig currency',
+       'Orig amount', 'Payment currency', 'Amount', 'Fee', 'Balance',
+       'Account', 'Beneficiary account number',
+       'Beneficiary sort code or routing number', 'Beneficiary IBAN',
+       'Beneficiary BIC']
+
+REVOLUT_BUSINESS_column_subset = ['Date completed (UTC)', 'Amount', 'Description', 'Type']
+
+REVOLUT_BUSINESS_TO_ING_names_dict = dict(zip(REVOLUT_BUSINESS_column_subset, ["Date", 
+                                                             'Amount (EUR)', 
+                                                             'Name / Description', 
+                                                             'Debit/credit']))
