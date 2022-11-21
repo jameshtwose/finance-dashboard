@@ -22,10 +22,10 @@ CONTENT_STYLE = {
 
 sidebar = html.Div(
     [
-        html.H2("Finance Dashboard (Dutch)", className="display-4"),
+        html.H2("Finance Dashboard", className="display-4"),
         html.Hr(),
         html.P(
-            """Upload your finance data in csv format (currently ASN, BUNQ, ING .csv 
+            """Upload your finance data in csv format (currently ASN, BUNQ, ING, and REVOLUT .csv 
             files in either English or Dutch (ING) are accepted)""", 
             className="lead"
         ),
@@ -35,7 +35,8 @@ sidebar = html.Div(
                               "ING - Dutch (comma seperated)", 
                               "ING - Dutch (semicolon seperated)", 
                               "ING - English (comma seperated)", 
-                              "ING - English (semicolon seperated)"], 
+                              "ING - English (semicolon seperated)",
+                              "REVOLUT"], 
                      value="ASN",
                      multi=False, 
                      id='bank-string-dropdown'),
@@ -51,6 +52,18 @@ sidebar = html.Div(
             vertical=True,
             pills=True,
         ),
+        html.Hr(),
+        html.Div(
+            [html.Img(src=r'assets/logo.png', alt='logo', width=80)],
+            style = {'textAlign': 'center'}),       
+        html.Div(
+            [html.A(children="Created by James Twose",
+                href="https://services.jms.rocks",
+                style={'color': "#5f4a89"})],
+                style = {'textAlign': 'center',
+                            'color': "#5f4a89",
+                            'marginTop': 40,
+                            'marginBottom': 40}),
     ],
     style=SIDEBAR_STYLE,
 )

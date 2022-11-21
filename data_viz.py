@@ -1,4 +1,5 @@
 import plotly.express as px
+from parse_utils import plot_color_list
 
 import pandas as pd
 
@@ -19,7 +20,8 @@ def show_line_plot(data: pd.DataFrame,
                                hover_data=hover_columns,
                                width=1500, 
                                height=800, 
-                               title="Line plot of incomings and outgoings per day")
+                               title="Line plot of incomings and outgoings per day", 
+                               color_discrete_sequence=plot_color_list)
     # fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
     return fig
 
@@ -39,7 +41,8 @@ def show_box_plot(data: pd.DataFrame,
                             #    hover_data=hover_columns,
                                width=1500, 
                                height=800, 
-                               title="Box plot of incomings and outgoings per day")
+                               title="Box plot of incomings and outgoings per day", 
+                               color_discrete_sequence=plot_color_list)
     # fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
     return fig
 
@@ -67,6 +70,7 @@ def show_bar_plot(data: pd.DataFrame,
                                hover_data=hover_columns,
                                width=1500, 
                                height=800, 
-                               title=f"Stacked Bar per {amount_column} Per Year/ Month")
+                               title=f"Stacked Bar per {amount_column} Per Year/ Month", 
+                               color_discrete_sequence=plot_color_list)
     fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
     return fig
