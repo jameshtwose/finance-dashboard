@@ -15,6 +15,8 @@ from parse_utils import (ASN_column_names,
                          ING_ENGLISH_columns_list,
                          REVOLUT_column_subset,
                          REVOLUT_TO_ING_names_dict, 
+                         REVOLUT_BUSINESS_column_subset,
+                         REVOLUT_BUSINESS_TO_ING_names_dict
                          )
 from server import app
 
@@ -100,10 +102,6 @@ def parse_input(contents, filename, bank_string):
                       )
             elif bank_string == "REVOLUT":
                     df = (pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-                    # .assign(**{"Amount": lambda d: d["Amount"]
-                    #             .str.replace(".", "")
-                    #             .str.replace(",",".")
-                    #             .astype(float)})
                        .loc[:, REVOLUT_column_subset]
                       .rename(columns=REVOLUT_TO_ING_names_dict)
                       .assign(**{"Debit/credit": lambda d: d["Amount (EUR)"]
@@ -112,6 +110,21 @@ def parse_input(contents, filename, bank_string):
                                  .replace({0: "Debit", 1: "Credit"}),
                                  "Amount (EUR)": lambda d: d["Amount (EUR)"].abs(),
                                  "Date": lambda d: pd.to_datetime(d["Date"], format="%Y-%m-%d").round("d"),
+                                 "Code": "Not Available"
+                                 }
+                              )
+                    )
+            elif bank_string == "REVOLUT - business":
+                    df = (pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+                       .loc[:, REVOLUT_BUSINESS_column_subset]
+                      .rename(columns=REVOLUT_BUSINESS_TO_ING_names_dict)
+                      .assign(**{"Debit/credit": lambda d: d["Amount (EUR)"]
+                                 .mask(lambda x: x > 0, 1)
+                                 .mask(lambda x: x < 0, 0)
+                                 .replace({0: "Debit", 1: "Credit"}),
+                                 "Amount (EUR)": lambda d: d["Amount (EUR)"].abs(),
+                                 "Date": lambda d: pd.to_datetime(d["Date"], format="%Y-%m-%d").round("d"),
+                                 "Account": "BUSINESS",
                                  "Code": "Not Available"
                                  }
                               )
