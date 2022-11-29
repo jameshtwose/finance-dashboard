@@ -34,3 +34,11 @@ tr:first-child {
     font-size: 15px;
     /* font-weight: bold; */
 }
+
+#general {
+    background-color: rgba(248, 249, 250, 0.34);
+    padding: 20px;
+    color: var(--header_color);
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
