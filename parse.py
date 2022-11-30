@@ -16,6 +16,8 @@ from parse_utils import (
     REVOLUT_TO_ING_names_dict,
     REVOLUT_BUSINESS_column_subset,
     REVOLUT_BUSINESS_TO_ING_names_dict,
+    BANKINTER_column_subset,
+    BANKINTER_TO_ING_names_dict
 )
 from server import app
 
@@ -147,6 +149,31 @@ def parse_input(contents, filename, bank_string):
                                 "d"
                             ),
                             "Account": "BUSINESS",
+                            "Code": "Not Available",
+                        }
+                    )
+                )
+            elif bank_string == "BANK INTER":
+                df = (
+                    pd.read_csv(io.StringIO(decoded.decode("utf-8")))
+                    # .assign(
+                    #     **{
+                    #         "Amount": lambda d: d["Amount"]
+                    #         .str.replace(".", "")
+                    #         .str.replace(",", ".")
+                    #         .astype(float)
+                    #     }
+                    # )
+                    .loc[:, BANKINTER_column_subset]
+                    .rename(columns=BANKINTER_TO_ING_names_dict)
+                    .assign(
+                        **{
+                            "Debit/credit": lambda d: d["Amount (EUR)"]
+                            .mask(lambda x: x > 0, 1)
+                            .mask(lambda x: x < 0, 0)
+                            .replace({0: "Debit", 1: "Credit"}),
+                            "Amount (EUR)": lambda d: d["Amount (EUR)"].abs(),
+                            "Date": lambda d: pd.to_datetime(d["Date"], format="%d-%m-%Y"),
                             "Code": "Not Available",
                         }
                     )
