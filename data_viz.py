@@ -26,7 +26,7 @@ def show_line_plot(
         hover_data=hover_columns,
         width=1500,
         height=800,
-        title="Line plot of incomings and outgoings per day",
+        # title="Line plot of incomings and outgoings per day",
         color_discrete_sequence=plot_color_list,
     )
     # fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
@@ -53,7 +53,7 @@ def show_box_plot(
         #    hover_data=hover_columns,
         width=1500,
         height=800,
-        title="Box plot of incomings and outgoings per day",
+        # title="Box plot of incomings and outgoings per day",
         color_discrete_sequence=plot_color_list,
     )
     # fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
@@ -78,14 +78,15 @@ def show_bar_plot(
         }
     )
 
-    label_df = plot_df[["Year-Month", amount_column]].groupby("Year-Month").sum().reset_index()
+    label_in_df = plot_df.pipe(lambda d: d[d["Debit/credit"] == "Credit"])[["Year-Month", amount_column]].groupby("Year-Month").sum().reset_index().round(2)
+    label_out_df = plot_df.pipe(lambda d: d[d["Debit/credit"] == "Debit"])[["Year-Month", amount_column]].groupby("Year-Month").sum().reset_index().round(2)
 
     fig = px.bar(
         plot_df,
         x="Year-Month",
         y=amount_column,
         color=color_column,
-        text=amount_column,
+        # text=amount_column,
         hover_data=hover_columns,
         width=1500,
         height=800,
@@ -94,18 +95,36 @@ def show_bar_plot(
     )
     fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
 
-   #  fig.add_trace(
-   #      go.Scatter(
-   #          x=label_df["Year-Month"],
-   #          y=label_df[amount_column],
-   #          text=label_df[amount_column],
-   #          mode="text",
-   #          textposition="top center",
-   #          textfont=dict(
-   #              size=18,
-   #          ),
-   #          showlegend=False,
-   #      )
-   #  )
+    fig.add_trace(
+        go.Scatter(
+            x=label_in_df["Year-Month"],
+            y=label_in_df[amount_column],
+            text=label_in_df[amount_column],
+            mode="text",
+            textposition="top center",
+            textfont=dict(
+                size=16,
+            ),
+            showlegend=False,
+        )
+    )
+    
+    if label_out_df[amount_column].min() > 0:
+        new_position = "top center"
+    else:
+        new_position = "bottom center"
+    
+    fig.add_trace(
+        go.Scatter(
+            x=label_out_df["Year-Month"],
+            y=label_out_df[amount_column],
+            text=label_out_df[amount_column],
+            mode="text",
+            textposition=new_position,
+            textfont=dict(
+                size=16),
+            showlegend=False,
+        )
+    )
 
     return fig
