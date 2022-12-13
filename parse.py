@@ -1,5 +1,7 @@
 import base64
 import pandas as pd
+import numpy as np
+from scipy.stats import mode
 import io
 from dash import dcc, html, dash_table
 from data_viz import show_bar_plot, show_line_plot, show_box_plot
@@ -28,6 +30,10 @@ name_column = "Name / Description"
 sum_column = "Total (EUR)"
 
 
+def get_mode(col):
+    return mode(col)[0][0]
+
+
 def parse_input(contents, filename, bank_string):
     content_type, content_string = contents.split(",")
     decoded = base64.b64decode(content_string)
@@ -50,8 +56,10 @@ def parse_input(contents, filename, bank_string):
                             .mask(lambda x: x > 0, 1)
                             .mask(lambda x: x < 0, 0)
                             .replace({0: "Debit", 1: "Credit"}),
+                            "in_out_amount": lambda d: d["Amount (EUR)"],
                             "Amount (EUR)": lambda d: d["Amount (EUR)"].abs(),
                             "Date": lambda d: pd.to_datetime(d["Date"], format="%d-%m-%Y"),
+                            "Name / Description": lambda d: d["Name / Description"].replace({np.nan: "None"})
                         }
                     )
                 )
@@ -82,7 +90,8 @@ def parse_input(contents, filename, bank_string):
                 )
             elif bank_string == "ING - Dutch (comma seperated)":
                 df = (
-                    pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep=",", decimal=",")
+                    pd.read_csv(io.StringIO(decoded.decode(
+                        "utf-8")), sep=",", decimal=",")
                     .loc[:, ING_DUTCH_columns_list]
                     .assign(
                         **{
@@ -95,7 +104,8 @@ def parse_input(contents, filename, bank_string):
                 )
             elif bank_string == "ING - Dutch (semicolon seperated)":
                 df = (
-                    pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep=";", decimal=",")
+                    pd.read_csv(io.StringIO(decoded.decode(
+                        "utf-8")), sep=";", decimal=",")
                     .loc[:, ING_DUTCH_columns_list]
                     .assign(
                         **{
@@ -209,7 +219,8 @@ def parse_input(contents, filename, bank_string):
 
 
 def parse_descriptives(contents, filename, bank_string):
-    df, amount_column, groupby_column, _, _, _ = parse_input(contents, filename, bank_string)
+    df, amount_column, groupby_column, _, _, _ = parse_input(
+        contents, filename, bank_string)
 
     groupby_columns_list = [groupby_column, "Debit/credit", amount_column]
     totals_columns_list = ["Year-Month", "Debit/credit", amount_column]
@@ -224,53 +235,61 @@ def parse_descriptives(contents, filename, bank_string):
     )
     descriptives_df.columns = [" - ".join(x) for x in descriptives_df.columns]
     totals_df = (
-        df[totals_columns_list].groupby(totals_columns_list[:-1]).sum().reset_index().round(2)
+        df[totals_columns_list].groupby(
+            totals_columns_list[:-1]).sum().reset_index().round(2)
     )
 
-    head_df = df.drop(["Year", "Month", "Year-Month"], axis=1).round(2)
+    head_df = (df.drop(["Year", "Month", "Year-Month"], axis=1)
+               .assign(**{date_column: lambda d: d[date_column].dt.date}).round(2)
+               )
 
-    regular_outgoings = df.loc[df["Debit/credit"] == "Debit", "Name / Description"].value_counts().head(40).index.tolist()
+    regular_outgoings = df.loc[df["Debit/credit"] == "Debit",
+                               "Name / Description"].value_counts().head(40).index.tolist()
     regular_outgoings_df = (
         df
         .pipe(lambda d: d[d["Debit/credit"] == "Debit"])
         .loc[df["Name / Description"].isin(regular_outgoings),
-        ["Name / Description", amount_column]]
+             ["Name / Description", amount_column]]
         .groupby("Name / Description")
         .agg(["count", "sum"])
         .sort_values(by=(amount_column, "sum"), ascending=False)
+        .round(2)
         .reset_index()
     )
-    regular_outgoings_df.columns = regular_outgoings_df.columns.droplevel(level=0)
+    regular_outgoings_df.columns = regular_outgoings_df.columns.droplevel(
+        level=0)
 
     average_regular_outgoings_sum = (df.pipe(lambda d: d[d["Debit/credit"] == "Debit"])
-        .loc[df["Name / Description"].isin(regular_outgoings),
-        ["Year-Month", amount_column]]
-        .groupby("Year-Month")
-        .sum()
-        .mean()
-        .round(2)
-        .values[0]
-        )
+                                     .loc[df["Name / Description"].isin(regular_outgoings),
+                                          ["Year-Month", amount_column]]
+                                     .groupby("Year-Month")
+                                     .sum()
+                                     .mean()
+                                     .round(2)
+                                     .values[0]
+                                     )
 
     amount_transactions = df.shape[0]
     date_min = str(df[date_column].min())[:-9]
     date_max = str(df[date_column].max())[:-9]
-    amount_earned = df.loc[df["Debit/credit"] == "Credit", amount_column].sum().round()
-    amount_spent = df.loc[df["Debit/credit"] == "Debit", amount_column].sum().round(2)
+    amount_earned = df.loc[df["Debit/credit"] ==
+                           "Credit", amount_column].sum().round()
+    amount_spent = df.loc[df["Debit/credit"] ==
+                          "Debit", amount_column].sum().round(2)
     total_difference = round(amount_earned - amount_spent, 2)
     sum_outgoings_df = (df
-        .pipe(lambda d: d[d["Debit/credit"] == "Debit"])
-        .loc[:, [date_column, amount_column]]
-        .groupby(date_column)
-        .sum()
-        .reset_index()
-        )
+                        .pipe(lambda d: d[d["Debit/credit"] == "Debit"])
+                        .loc[:, [date_column, amount_column]]
+                        .groupby(date_column)
+                        .sum()
+                        .reset_index()
+                        )
     amount_least_spent = sum_outgoings_df[amount_column].min()
     amount_most_spent = sum_outgoings_df[amount_column].max()
     date_least_spent = str(sum_outgoings_df.loc[sum_outgoings_df[amount_column] == amount_least_spent,
-        date_column].iloc[0])[:-9]
+                                                date_column].iloc[0])[:-9]
     date_most_spent = str(sum_outgoings_df.loc[sum_outgoings_df[amount_column] == amount_most_spent,
-        date_column].iloc[0])[:-9]
+                                               date_column].iloc[0])[:-9]
 
     return html.Div(
         [
@@ -282,10 +301,13 @@ def parse_descriptives(contents, filename, bank_string):
                 html.P(f"""Amount earned: €{amount_earned}"""),
                 html.P(f"""Amount spent: €-{amount_spent}"""),
                 html.P(f"""Total difference: €{total_difference}"""),
-                html.P(f"""Date Least Spent: {date_least_spent}, Amount: €-{amount_least_spent}"""),
-                html.P(f"""Date Most Spent: {date_most_spent}, Amount: €-{amount_most_spent}"""),
-                html.P(f"""Estimated regular monthly spendings: €{average_regular_outgoings_sum}""")
-                ], id="general"
+                html.P(
+                    f"""Date Least Spent: {date_least_spent}, Amount: €-{amount_least_spent}"""),
+                html.P(
+                    f"""Date Most Spent: {date_most_spent}, Amount: €-{amount_most_spent}"""),
+                html.P(
+                    f"""Estimated regular monthly spendings: €{average_regular_outgoings_sum}""")
+            ], id="general"
             ),
             html.H6("Data Frame Head"),
             dash_table.DataTable(
@@ -309,7 +331,8 @@ def parse_descriptives(contents, filename, bank_string):
             html.H6("Regular Outgoings:"),
             dash_table.DataTable(
                 data=regular_outgoings_df.to_dict("records"),
-                columns=[{"name": i, "id": i} for i in regular_outgoings_df.columns],
+                columns=[{"name": i, "id": i}
+                         for i in regular_outgoings_df.columns],
                 style_header={"backgroundColor": "#5f4a89"},
                 sort_action="native",
                 filter_action="native",
@@ -351,13 +374,13 @@ def parse_bar_plots(contents, filename, bank_string):
         hover_columns=[name_column, groupby_column],
     )
 
-    bar_fig = show_bar_plot(
-        data=df,
-        amount_column=amount_column,
-        date_column=date_column,
-        color_column=groupby_column,
-        hover_columns=[name_column, groupby_column],
-    )
+    # bar_fig = show_bar_plot(
+    #     data=df,
+    #     amount_column=amount_column,
+    #     date_column=date_column,
+    #     color_column=groupby_column,
+    #     hover_columns=[name_column, groupby_column],
+    # )
 
     bar_in_fig = show_bar_plot(
         data=df[df["Debit/credit"] == "Credit"],
@@ -376,10 +399,11 @@ def parse_bar_plots(contents, filename, bank_string):
     return html.Div(
         [
             html.H5(filename),
-            html.H6("Barplot of all incoming as positive and outgoing as negative transactions"),
+            html.H6(
+                "Barplot of all incoming as positive and outgoing as negative transactions"),
             dcc.Graph(figure=in_out_bar_fig),
-            html.H6("Barplot of all incoming and outgoing transactions"),
-            dcc.Graph(figure=bar_fig),
+            # html.H6("Barplot of all incoming and outgoing transactions"),
+            # dcc.Graph(figure=bar_fig),
             html.H6("Barplot of all outgoing transactions"),
             dcc.Graph(figure=bar_out_fig),
             html.H6("Barplot of all incoming transactions"),
@@ -403,8 +427,14 @@ def parse_time_plots(contents, filename, bank_string):
         hover_columns=[name_column, groupby_column],
     )
 
+    feature_list = [name_column, groupby_column, amount_column, sum_column,
+                    date_column, color_column]
+    
+    ts_df = df[feature_list].groupby(date_column).agg(
+        dict(zip(feature_list, [get_mode, get_mode, "sum", "mean", get_mode, get_mode])))
+
     line_fig = show_line_plot(
-        data=df,
+        data=ts_df,
         amount_column=amount_column,
         date_column=date_column,
         color_column=color_column,
@@ -412,7 +442,7 @@ def parse_time_plots(contents, filename, bank_string):
     )
 
     sum_line_fig = show_line_plot(
-        data=df,
+        data=ts_df,
         amount_column=sum_column,
         date_column=date_column,
         color_column=None,
@@ -423,9 +453,9 @@ def parse_time_plots(contents, filename, bank_string):
             html.H5(filename),
             html.H6("Boxplot of all incoming and outgoing transactions"),
             dcc.Graph(figure=box_fig),
-            html.H6("Lineplot of all incoming and outgoing transactions"),
+            html.H6("Lineplot of the sun of all incoming and outgoing transactions"),
             dcc.Graph(figure=line_fig),
-            html.H6("Lineplot of the sum of all incoming and outgoing transactions"),
+            html.H6("Lineplot of the daily mean of all incoming and outgoing transactions"),
             dcc.Graph(figure=sum_line_fig),
         ]
     )
