@@ -35,6 +35,10 @@ def get_mode(col):
 
 
 def parse_input(contents, filename, bank_string):
+    if "csv" not in filename:
+        return html.Div([html.H2("There was an error processing this file."),
+                         html.H6("check that the file is a '.csv' and that the export is from one of the banks listed in the sidebar.")]), "", "", "", "", ""
+
     content_type, content_string = contents.split(",")
     decoded = base64.b64decode(content_string)
     try:
@@ -215,12 +219,15 @@ def parse_input(contents, filename, bank_string):
             return html.Div(["Currently only .csv files are accepted in this dashboard"])
     except Exception as e:
         print(e)
-        return html.Div(["There was an error processing this file."])
+        return html.Div([html.H6("There was an error processing this file.")])
 
 
 def parse_descriptives(contents, filename, bank_string):
     df, amount_column, groupby_column, _, _, _ = parse_input(
         contents, filename, bank_string)
+
+    if amount_column == "":
+        return df
 
     groupby_columns_list = [groupby_column, "Debit/credit", amount_column]
     totals_columns_list = ["Year-Month", "Debit/credit", amount_column]
@@ -429,7 +436,7 @@ def parse_time_plots(contents, filename, bank_string):
 
     feature_list = [name_column, groupby_column, amount_column, sum_column,
                     date_column, color_column]
-    
+
     ts_df = df[feature_list].groupby(date_column).agg(
         dict(zip(feature_list, [get_mode, get_mode, "sum", "mean", get_mode, get_mode])))
 
@@ -453,9 +460,10 @@ def parse_time_plots(contents, filename, bank_string):
             html.H5(filename),
             html.H6("Boxplot of all incoming and outgoing transactions"),
             dcc.Graph(figure=box_fig),
-            html.H6("Lineplot of the sun of all incoming and outgoing transactions"),
+            html.H6("Lineplot of the sum of all incoming and outgoing transactions"),
             dcc.Graph(figure=line_fig),
-            html.H6("Lineplot of the daily mean of all incoming and outgoing transactions"),
+            html.H6(
+                "Lineplot of the daily mean of all incoming and outgoing transactions"),
             dcc.Graph(figure=sum_line_fig),
         ]
     )

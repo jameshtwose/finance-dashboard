@@ -67,7 +67,7 @@ def show_bar_plot(
     color_column: str,
     hover_columns: list,
 ):
-    plot_df = data.assign(
+    plot_df = (data.assign(
         **{
             date_column: lambda x: pd.to_datetime(x[date_column], format="%Y%m%d"),
             "Year": lambda x: x[date_column].dt.year,
@@ -75,8 +75,9 @@ def show_bar_plot(
             "Year-Month": lambda x: x["Year"].astype(str) + "-" + x["Month"].astype(str),
             "Day": lambda x: x[date_column].dt.day,
             # "Amount": lambda x: x[amount_column].str.replace(",", ".").astype(float),
-        }
-    )
+        })
+               .groupby([color_column]).apply(lambda x: x.sort_values(amount_column, ascending=False))
+               )
 
     label_in_df = plot_df.pipe(lambda d: d[d["Debit/credit"] == "Credit"])[["Year-Month", amount_column]].groupby("Year-Month").sum().reset_index().round(2)
     label_out_df = plot_df.pipe(lambda d: d[d["Debit/credit"] == "Debit"])[["Year-Month", amount_column]].groupby("Year-Month").sum().reset_index().round(2)
